@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.env
+*.log
+*.err
+.playwright-cli/
+dashboard-*.png
+landing*.png
+dist/
+build/

@@ -4,6 +4,8 @@ Python Project 2 interactive web application built with Streamlit, Plotly, panda
 
 The app converts the shopping trends analysis into an interactive dashboard with a landing page, grouped filters, reset controls, Plotly charts, and a dark Liquid Glass dashboard design inspired by the Open Design dashboard system.
 
+The checked-in data file is the provided `shopping_trends_updated (2).csv` dataset, saved as `data/shopping_trends.csv` for Streamlit deployment.
+
 ## Run Locally
 
 ```powershell
@@ -40,5 +42,6 @@ In Streamlit Community Cloud, use Python 3.12 in Advanced settings if a Python v
   - Market
   - Transaction
 - KPI cards
-- Plotly charts for spending, customer behavior, products, locations, payment, shipping, discounts, promo use, and purchase frequency
+- Focused dashboard views for overview, customer insights, product sales, and data exploration
+- Plotly charts for revenue share, seasonal spending, customer behavior, product ranking, and category-season performance
 - Filtered transaction explorer

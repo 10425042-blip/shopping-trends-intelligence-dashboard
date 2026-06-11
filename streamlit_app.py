@@ -17,13 +17,11 @@ BACKGROUND_URL = "https://images.pexels.com/photos/5865240/pexels-photo-5865240.
 
 SEASON_ORDER = ["Spring", "Summer", "Fall", "Winter"]
 SIZE_ORDER = ["S", "M", "L", "XL"]
-FREQUENCY_ORDER = ["Weekly", "Fortnightly", "Monthly", "Quarterly", "Every 3 Months", "Annually"]
+FREQUENCY_ORDER = ["Weekly", "Fortnightly", "Bi-Weekly", "Monthly", "Quarterly", "Every 3 Months", "Annually"]
 DASHBOARD_VIEWS = [
     "Overview",
     "Customer Insights",
     "Product & Sales",
-    "Shipping & Subscription",
-    "Payment & Promo",
     "Data Explorer",
 ]
 
@@ -45,7 +43,6 @@ COLUMN_MAP = {
     "Discount Applied": "discount_applied",
     "Promo Code Used": "promo_code_used",
     "Previous Purchases": "previous_purchases",
-    "Preferred Payment Method": "preferred_payment_method",
     "Frequency of Purchases": "frequency_of_purchases",
 }
 
@@ -62,7 +59,6 @@ DEFAULT_FILTERS = {
     "season_filter": [],
     "location_filter": [],
     "payment_filter": [],
-    "preferred_payment_filter": [],
     "shipping_filter": [],
     "discount_filter": [],
     "promo_filter": [],
@@ -106,7 +102,6 @@ DISPLAY_LABELS = {
     "item_purchased": "Item purchased",
     "location": "Location",
     "payment_method": "Payment method",
-    "preferred_payment_method": "Preferred payment method",
     "purchase_amount": "Purchase amount (USD)",
     "purchases": "Purchases",
     "review_rating": "Review rating",
@@ -498,6 +493,14 @@ def inject_css() -> None:
             font-size: 14px;
         }}
 
+        .chart-caption {{
+            margin: -2px 0 16px 0;
+            padding: 0 4px;
+            color: #C9CBD3;
+            font-size: 13px;
+            line-height: 1.45;
+        }}
+
         .filter-summary {{
             display: flex;
             flex-wrap: wrap;
@@ -749,7 +752,6 @@ def reset_filters(df: pd.DataFrame) -> None:
     st.session_state.season_filter = []
     st.session_state.location_filter = []
     st.session_state.payment_filter = []
-    st.session_state.preferred_payment_filter = []
     st.session_state.shipping_filter = []
     st.session_state.discount_filter = []
     st.session_state.promo_filter = []
@@ -769,7 +771,6 @@ def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
         "season": st.session_state.season_filter,
         "location": st.session_state.location_filter,
         "payment_method": st.session_state.payment_filter,
-        "preferred_payment_method": st.session_state.preferred_payment_filter,
         "shipping_type": st.session_state.shipping_filter,
         "discount_applied": st.session_state.discount_filter,
         "promo_code_used": st.session_state.promo_filter,
@@ -823,7 +824,6 @@ def active_filter_labels(df: pd.DataFrame) -> list[str]:
         "season_filter": "Season",
         "location_filter": "Location",
         "payment_filter": "Payment",
-        "preferred_payment_filter": "Preferred payment",
         "shipping_filter": "Shipping",
         "discount_filter": "Discount",
         "promo_filter": "Promo",
@@ -881,11 +881,6 @@ def sidebar_filters(df: pd.DataFrame) -> None:
 
         with st.expander("Transaction filters", expanded=False):
             st.multiselect("Payment method", sorted_unique(df, "payment_method"), key="payment_filter")
-            st.multiselect(
-                "Preferred payment method",
-                sorted_unique(df, "preferred_payment_method"),
-                key="preferred_payment_filter",
-            )
             st.multiselect("Shipping type", sorted_unique(df, "shipping_type"), key="shipping_filter")
             st.multiselect("Discount applied", sorted_unique(df, "discount_applied"), key="discount_filter")
             st.multiselect("Promo code used", sorted_unique(df, "promo_code_used"), key="promo_filter")
@@ -923,7 +918,7 @@ def style_figure(fig: go.Figure, title: str) -> go.Figure:
         plot_bgcolor="rgba(0,0,0,0)",
         font={"family": "IBM Plex Sans, Inter, Segoe UI, Arial, sans-serif", "color": DASHBOARD_COLORS["text"], "size": 13},
         colorway=COLORWAY,
-        margin={"t": 58, "r": 24, "b": 48, "l": 58},
+        margin={"t": 58, "r": 42, "b": 48, "l": 58},
         legend={"orientation": "h", "y": 1.03, "x": 1, "xanchor": "right", "font": {"color": DASHBOARD_COLORS["muted"]}},
         hoverlabel={"bgcolor": "#09090B", "font_color": "#FAFAFA", "bordercolor": DASHBOARD_COLORS["primary"]},
     )
@@ -978,7 +973,7 @@ def bar_total(df: pd.DataFrame, group: str, value: str, title: str, limit: int |
     fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside", cliponaxis=False)
     fig.update_layout(showlegend=False)
     if orientation == "h" and not grouped.empty:
-        fig.update_xaxes(range=[0, float(grouped[value].max()) * 1.18])
+        fig.update_xaxes(range=[0, float(grouped[value].max()) * 1.25])
     return style_figure(fig, title)
 
 
@@ -1013,7 +1008,7 @@ def bar_count(df: pd.DataFrame, group: str, title: str, limit: int | None = None
     fig.update_traces(textposition="outside", cliponaxis=False)
     fig.update_layout(showlegend=False)
     if orientation == "h" and not grouped.empty:
-        fig.update_xaxes(range=[0, float(grouped["count"].max()) * 1.18])
+        fig.update_xaxes(range=[0, float(grouped["count"].max()) * 1.25])
     return style_figure(fig, title)
 
 
@@ -1047,6 +1042,34 @@ def donut(df: pd.DataFrame, group: str, title: str) -> go.Figure:
     return styled
 
 
+def category_revenue_treemap(df: pd.DataFrame) -> go.Figure:
+    title = "Category Revenue Share"
+    if df.empty:
+        return empty_figure(title)
+    grouped = (
+        df.groupby("category", as_index=False)
+        .agg(total_sales=("purchase_amount", "sum"), avg_order=("purchase_amount", "mean"), purchases=("customer_id", "count"))
+        .sort_values("total_sales", ascending=False)
+    )
+    fig = px.treemap(
+        grouped,
+        path=["category"],
+        values="total_sales",
+        color="avg_order",
+        color_continuous_scale=["#7C3AED", "#54D6FF", "#D7FF3F"],
+        custom_data=["purchases", "avg_order"],
+        labels={"total_sales": "Total spending (USD)", "avg_order": "Average order"},
+    )
+    fig.update_traces(
+        texttemplate="<b>%{label}</b><br>$%{value:,.0f}",
+        hovertemplate="<b>%{label}</b><br>Total: $%{value:,.0f}<br>Average order: $%{customdata[1]:.2f}<br>Purchases: %{customdata[0]:,.0f}<extra></extra>",
+        marker={"line": {"color": "rgba(5,5,6,0.7)", "width": 2}},
+    )
+    styled = style_figure(fig, title)
+    styled.update_layout(margin={"t": 58, "r": 20, "b": 20, "l": 20}, coloraxis_showscale=False)
+    return styled
+
+
 def season_line(df: pd.DataFrame) -> go.Figure:
     if df.empty:
         return empty_figure("Total Spending by Season")
@@ -1062,6 +1085,33 @@ def season_line(df: pd.DataFrame) -> go.Figure:
     )
     fig.update_traces(line={"width": 4, "color": DASHBOARD_COLORS["primary"]}, marker={"size": 10})
     return style_figure(fig, "Total Spending by Season")
+
+
+def age_purchase_scatter(df: pd.DataFrame) -> go.Figure:
+    title = "Age and Purchase Amount"
+    if df.empty:
+        return empty_figure(title)
+    fig = px.scatter(
+        df,
+        x="age",
+        y="purchase_amount",
+        color="gender",
+        size="previous_purchases",
+        size_max=18,
+        opacity=0.72,
+        color_discrete_sequence=COLORWAY,
+        hover_data=["category", "item_purchased", "subscription_status"],
+        labels={
+            "age": "Age",
+            "purchase_amount": "Purchase amount (USD)",
+            "gender": "Gender",
+            "previous_purchases": "Previous purchases",
+        },
+    )
+    fig.update_traces(marker={"line": {"color": "rgba(255,255,255,0.22)", "width": 0.6}})
+    styled = style_figure(fig, title)
+    styled.update_layout(legend={"orientation": "h", "y": 1.08, "x": 1, "xanchor": "right", "font": {"color": DASHBOARD_COLORS["muted"]}})
+    return styled
 
 
 def discount_impact(df: pd.DataFrame) -> go.Figure:
@@ -1098,27 +1148,91 @@ def discount_impact(df: pd.DataFrame) -> go.Figure:
 def purchase_distribution(df: pd.DataFrame) -> go.Figure:
     if df.empty:
         return empty_figure("Purchase Amount Distribution")
-    fig = px.histogram(
-        df,
-        x="purchase_amount",
-        nbins=24,
-        color_discrete_sequence=[DASHBOARD_COLORS["primary"]],
-        labels={"purchase_amount": "Purchase amount (USD)", "count": "Purchases"},
+    values = df["purchase_amount"].dropna().astype(float).to_numpy()
+    if len(values) < 2 or float(np.std(values)) == 0:
+        fig = px.histogram(
+            df,
+            x="purchase_amount",
+            nbins=24,
+            color_discrete_sequence=[DASHBOARD_COLORS["primary"]],
+            labels={"purchase_amount": "Purchase amount (USD)", "count": "Purchases"},
+        )
+        return style_figure(fig, "Purchase Amount Distribution")
+
+    x_grid = np.linspace(float(values.min()), float(values.max()), 180)
+    bandwidth = max(1.0, 1.06 * float(np.std(values, ddof=1)) * (len(values) ** -0.2))
+    scaled = (x_grid[:, None] - values[None, :]) / bandwidth
+    density = np.exp(-0.5 * scaled * scaled).sum(axis=1) / (len(values) * bandwidth * np.sqrt(2 * np.pi))
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=x_grid,
+            y=density,
+            mode="lines",
+            fill="tozeroy",
+            line={"color": DASHBOARD_COLORS["danger"], "width": 3},
+            fillcolor="rgba(255, 77, 141, 0.28)",
+            hovertemplate="Purchase amount: $%{x:.0f}<br>Density: %{y:.4f}<extra></extra>",
+        )
     )
+    fig.update_xaxes(title_text="Purchase amount (USD)", range=[20, 100])
+    fig.update_yaxes(title_text="Density")
     return style_figure(fig, "Purchase Amount Distribution")
 
 
 def rating_distribution(df: pd.DataFrame) -> go.Figure:
     if df.empty:
-        return empty_figure("Customer Review Ratings")
-    fig = px.histogram(
-        df,
-        x="review_rating",
-        nbins=16,
-        color_discrete_sequence=[DASHBOARD_COLORS["warning"]],
-        labels={"review_rating": "Review rating", "count": "Purchases"},
+        return empty_figure("Review Rating Distribution")
+    grouped = (
+        df["review_rating"]
+        .value_counts()
+        .rename_axis("review_rating")
+        .reset_index(name="count")
+        .sort_values("review_rating")
     )
-    return style_figure(fig, "Customer Review Ratings")
+    fig = px.bar(
+        grouped,
+        x="review_rating",
+        y="count",
+        color="review_rating",
+        text="count",
+        color_continuous_scale=["#FFB86C", "#D7FF3F", "#38F7B0"],
+        labels={"review_rating": "Review rating", "count": "Number of reviews"},
+    )
+    fig.update_traces(textposition="outside", cliponaxis=False)
+    fig.update_layout(showlegend=False, coloraxis_showscale=False)
+    fig.update_xaxes(dtick=0.1)
+    if not grouped.empty:
+        fig.update_yaxes(range=[0, float(grouped["count"].max()) * 1.18])
+    return style_figure(fig, "Review Rating Distribution")
+
+
+def previous_purchases_distribution(df: pd.DataFrame) -> go.Figure:
+    if df.empty:
+        return empty_figure("Previous Purchases Distribution")
+    grouped = (
+        df["previous_purchases"]
+        .value_counts()
+        .rename_axis("previous_purchases")
+        .reset_index(name="count")
+        .sort_values("previous_purchases")
+    )
+    fig = px.bar(
+        grouped,
+        x="previous_purchases",
+        y="count",
+        color="count",
+        text="count",
+        color_continuous_scale=["#7C3AED", "#FF4D8D", "#D7FF3F"],
+        labels={"previous_purchases": "Number of previous purchases", "count": "Number of customers"},
+    )
+    fig.update_traces(textposition="outside", cliponaxis=False)
+    fig.update_layout(showlegend=False, coloraxis_showscale=False)
+    fig.update_xaxes(dtick=5)
+    if not grouped.empty:
+        fig.update_yaxes(range=[0, float(grouped["count"].max()) * 1.18])
+    return style_figure(fig, "Previous Purchases Distribution")
 
 
 def age_spend(df: pd.DataFrame) -> go.Figure:
@@ -1167,6 +1281,32 @@ def category_rating(df: pd.DataFrame) -> go.Figure:
     return style_figure(fig, "Customer Ratings by Category")
 
 
+def category_season_heatmap(df: pd.DataFrame) -> go.Figure:
+    title = "Category Performance by Season"
+    if df.empty:
+        return empty_figure(title)
+    grouped = df.groupby(["category", "season"], as_index=False)["purchase_amount"].sum()
+    totals = grouped.groupby("category")["purchase_amount"].sum().sort_values(ascending=False)
+    pivot = (
+        grouped.pivot(index="category", columns="season", values="purchase_amount")
+        .reindex(index=totals.index, columns=[season for season in SEASON_ORDER if season in grouped["season"].unique()])
+        .fillna(0)
+    )
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=pivot.values,
+            x=pivot.columns.tolist(),
+            y=pivot.index.tolist(),
+            colorscale=[[0, "#22143F"], [0.5, "#2DD4BF"], [1, "#D7FF3F"]],
+            colorbar={"title": "Sales"},
+            hovertemplate="<b>%{y}</b><br>Season: %{x}<br>Total: $%{z:,.0f}<extra></extra>",
+        )
+    )
+    fig.update_xaxes(title_text="Season")
+    fig.update_yaxes(title_text="Category")
+    return style_figure(fig, title)
+
+
 def kpi_values(df: pd.DataFrame, full_df: pd.DataFrame) -> list[dict[str, str]]:
     if df.empty:
         return [
@@ -1194,14 +1334,9 @@ def insight_values(df: pd.DataFrame, view: str) -> list[str]:
         return ["No records match the current filters."]
     category = df.groupby("category")["purchase_amount"].sum().sort_values(ascending=False)
     season = df.groupby("season")["purchase_amount"].sum().sort_values(ascending=False)
-    location = df.groupby("location")["purchase_amount"].sum().sort_values(ascending=False)
-    payment = df["payment_method"].value_counts()
     subscription_rate = df["subscription_status"].eq("Yes").mean() * 100
-    shipping = df["shipping_type"].value_counts()
-    promo = df["promo_code_used"].value_counts()
-    frequency = df["frequency_of_purchases"].value_counts()
     item = df["item_purchased"].value_counts()
-    color = df["color"].value_counts()
+    age_group = df.groupby("age_group", observed=False)["purchase_amount"].mean().sort_values(ascending=False)
 
     view_insights = {
         "Overview": [
@@ -1212,22 +1347,12 @@ def insight_values(df: pd.DataFrame, view: str) -> list[str]:
         "Customer Insights": [
             f"Subscription rate is {pct(subscription_rate)} for the selected customers.",
             f"Average review rating is {df['review_rating'].mean():.2f}.",
-            f"{df['gender'].value_counts().index[0]} is the largest customer group in this view.",
+            f"{age_group.index[0]} has the highest average order value by age group.",
         ],
         "Product & Sales": [
             f"{item.index[0]} is the most frequently purchased item.",
             f"{category.index[0]} is the highest-spending category.",
-            f"{color.index[0]} is the most common product color.",
-        ],
-        "Shipping & Subscription": [
-            f"{shipping.index[0]} is the most used shipping type.",
-            f"Subscription status = Yes represents {pct(subscription_rate)} of this view.",
-            f"{frequency.index[0]} is the most common purchase frequency.",
-        ],
-        "Payment & Promo": [
-            f"{payment.index[0]} is the most used payment method.",
-            f"Promo code status is most often {promo.index[0]}.",
-            f"{location.index[0]} is the highest-spending location.",
+            "Seasonal category patterns show where product demand changes most.",
         ],
         "Data Explorer": [
             f"The table contains {number(len(df))} filtered purchases.",
@@ -1354,69 +1479,55 @@ def render_data_table(df: pd.DataFrame) -> None:
     st.dataframe(table_df, use_container_width=True, height=520, hide_index=True)
 
 
+def chart_caption(text: str) -> None:
+    st.markdown(f"<p class='chart-caption'>{escape(text)}</p>", unsafe_allow_html=True)
+
+
+def render_chart(fig: go.Figure, caption: str) -> None:
+    st.plotly_chart(fig, use_container_width=True)
+    chart_caption(caption)
+
+
 def render_selected_view(df: pd.DataFrame, view: str) -> None:
     if view == "Overview":
-        section("Overview", "Revenue, seasonality, discount behavior, and purchase amount distribution.")
+        section("Overview", "The fastest read on what drives revenue and when spending changes.")
         c1, c2 = st.columns([1.2, 1])
         with c1:
-            st.plotly_chart(bar_total(df, "category", "purchase_amount", "Customer Spending by Category"), use_container_width=True)
+            render_chart(
+                category_revenue_treemap(df),
+                "Shows which categories contribute the largest share of filtered revenue. Larger blocks mean stronger sales impact.",
+            )
         with c2:
-            st.plotly_chart(season_line(df), use_container_width=True)
-        c3, c4 = st.columns([1.1, 1])
-        with c3:
-            st.plotly_chart(discount_impact(df), use_container_width=True)
-        with c4:
-            st.plotly_chart(purchase_distribution(df), use_container_width=True)
+            render_chart(
+                season_line(df),
+                "Tracks spending across seasons so the strongest shopping periods are easy to compare.",
+            )
     elif view == "Customer Insights":
-        section("Customer Insights", "Customer composition, subscription behavior, age groups, and review patterns.")
+        section("Customer Insights", "A focused view of customer membership and spending behavior.")
         c1, c2 = st.columns(2)
         with c1:
-            st.plotly_chart(donut(df, "gender", "Gender Share"), use_container_width=True)
+            render_chart(
+                donut(df, "subscription_status", "Subscription Status Share"),
+                "Compares subscribed and non-subscribed customers in the current filter selection.",
+            )
         with c2:
-            st.plotly_chart(donut(df, "subscription_status", "Subscription Status Share"), use_container_width=True)
-        c3, c4 = st.columns([1.1, 1])
-        with c3:
-            st.plotly_chart(age_spend(df), use_container_width=True)
-        with c4:
-            st.plotly_chart(rating_distribution(df), use_container_width=True)
-        st.plotly_chart(category_rating(df), use_container_width=True)
+            render_chart(
+                age_purchase_scatter(df),
+                "Plots each purchase by age and amount. Bubble size adds repeat-purchase context for customer behavior.",
+            )
     elif view == "Product & Sales":
-        section("Product & Sales", "Demand by category, top items, sizes, colors, and highest-spending locations.")
+        section("Product & Sales", "The clearest product demand signals without repeating the full dataset.")
         c1, c2 = st.columns(2)
         with c1:
-            st.plotly_chart(bar_total(df, "category", "purchase_amount", "Customer Spending by Category"), use_container_width=True)
+            render_chart(
+                bar_count(df, "item_purchased", "Top Purchased Items", limit=10),
+                "Ranks the most purchased items so product demand is visible at a glance.",
+            )
         with c2:
-            st.plotly_chart(bar_count(df, "item_purchased", "Top 10 Purchased Items", limit=10), use_container_width=True)
-        c3, c4 = st.columns(2)
-        with c3:
-            st.plotly_chart(bar_count(df, "size", "Product Size Distribution", order=SIZE_ORDER), use_container_width=True)
-        with c4:
-            st.plotly_chart(bar_count(df, "color", "Top 10 Product Colors", limit=10), use_container_width=True)
-        st.plotly_chart(bar_total(df, "location", "purchase_amount", "Top 10 Locations by Spending", limit=10), use_container_width=True)
-    elif view == "Shipping & Subscription":
-        section("Shipping & Subscription", "Shipping method mix, subscription share, and purchase frequency behavior.")
-        c1, c2 = st.columns(2)
-        with c1:
-            st.plotly_chart(donut(df, "shipping_type", "Shipping Type Share"), use_container_width=True)
-        with c2:
-            st.plotly_chart(donut(df, "subscription_status", "Subscription Status Share"), use_container_width=True)
-        c3, c4 = st.columns(2)
-        with c3:
-            st.plotly_chart(bar_count(df, "shipping_type", "Shipping Type Usage"), use_container_width=True)
-        with c4:
-            st.plotly_chart(bar_count(df, "frequency_of_purchases", "Frequency of Purchases", order=FREQUENCY_ORDER), use_container_width=True)
-    elif view == "Payment & Promo":
-        section("Payment & Promo", "Payment method usage, promo code behavior, and discount impact.")
-        c1, c2 = st.columns(2)
-        with c1:
-            st.plotly_chart(bar_count(df, "payment_method", "Payment Method Usage"), use_container_width=True)
-        with c2:
-            st.plotly_chart(bar_count(df, "preferred_payment_method", "Preferred Payment Methods"), use_container_width=True)
-        c3, c4 = st.columns([1, 1.1])
-        with c3:
-            st.plotly_chart(donut(df, "promo_code_used", "Promo Code Share"), use_container_width=True)
-        with c4:
-            st.plotly_chart(discount_impact(df), use_container_width=True)
+            render_chart(
+                category_season_heatmap(df),
+                "Highlights category revenue by season, helping show where demand changes across the year.",
+            )
     else:
         section("Data Explorer", "Filtered records for checking details behind the charts.")
         render_data_table(df)
@@ -1429,6 +1540,8 @@ def render_dashboard(df: pd.DataFrame, full_df: pd.DataFrame) -> None:
         render_active_filters(full_df)
     with view_col:
         st.markdown("<p class='field-label'>Dashboard view</p>", unsafe_allow_html=True)
+        if st.session_state.dashboard_view not in DASHBOARD_VIEWS:
+            st.session_state.dashboard_view = DASHBOARD_VIEWS[0]
         view = st.selectbox("Dashboard view", DASHBOARD_VIEWS, key="dashboard_view", label_visibility="collapsed")
     with back_col:
         st.markdown("<p class='field-label'>Navigation</p>", unsafe_allow_html=True)

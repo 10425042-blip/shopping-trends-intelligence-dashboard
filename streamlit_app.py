@@ -455,11 +455,35 @@ def inject_css() -> None:
         }}
 
         .chart-caption {{
-            margin: -2px 0 16px 0;
-            padding: 0 4px;
-            color: #C9CBD3;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            align-items: start;
+            margin: 8px 0 18px 0;
+            padding: 10px 12px;
+            color: #F4F4F5;
+            background:
+                linear-gradient(135deg, rgba(215,255,63,0.12), rgba(84,214,255,0.07)),
+                rgba(255,255,255,0.055);
+            border: 1px solid rgba(215,255,63,0.24);
+            border-left: 4px solid var(--primary);
+            border-radius: 14px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 12px 34px rgba(0,0,0,0.24);
             font-size: 13px;
+            font-weight: 700;
             line-height: 1.45;
+        }}
+
+        .chart-caption span {{
+            color: var(--primary);
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }}
+
+        .chart-caption p {{
+            margin: 0;
         }}
 
         .filter-summary {{
@@ -895,110 +919,74 @@ def style_figure(fig: go.Figure, title: str) -> go.Figure:
     return fig
 
 
-def product_demand_sunburst(df: pd.DataFrame) -> go.Figure:
-    title = "Product Demand Map"
+def bar_count(df: pd.DataFrame, group: str, title: str, limit: int | None = None, order: list[str] | None = None) -> go.Figure:
     if df.empty:
         return empty_figure(title)
-    grouped = (
-        df.groupby(["category", "item_purchased"], as_index=False)
-        .agg(
-            purchases=("customer_id", "count"),
-            total_sales=("purchase_amount", "sum"),
-            avg_order=("purchase_amount", "mean"),
+    grouped = df[group].value_counts().rename_axis(group).reset_index(name="count")
+    if order:
+        grouped[group] = pd.Categorical(grouped[group], categories=order, ordered=True)
+        grouped = grouped.sort_values(group)
+        orientation = "v"
+    else:
+        grouped = grouped.sort_values("count", ascending=False)
+        if limit:
+            grouped = grouped.head(limit)
+        grouped = grouped.sort_values("count", ascending=True)
+        orientation = "h"
+    labels = {group: label_for(group), "count": "Purchases"}
+    if orientation == "h":
+        fig = px.bar(
+            grouped,
+            x="count",
+            y=group,
+            orientation="h",
+            color=group,
+            text="count",
+            labels=labels,
+            color_discrete_sequence=COLORWAY,
         )
-        .sort_values(["category", "purchases"], ascending=[True, False])
-    )
-    top_items = grouped.groupby("category", group_keys=False).head(5)
-    fig = px.sunburst(
-        top_items,
-        path=["category", "item_purchased"],
-        values="purchases",
-        color="total_sales",
-        color_continuous_scale=["#7C3AED", "#54D6FF", "#D7FF3F"],
-        custom_data=["total_sales", "avg_order"],
-        labels={
-            "category": "Category",
-            "item_purchased": "Item purchased",
-            "purchases": "Purchases",
-            "total_sales": "Total spending (USD)",
-        },
+    else:
+        fig = px.bar(grouped, x=group, y="count", color=group, text="count", labels=labels, color_discrete_sequence=COLORWAY)
+    fig.update_traces(textposition="outside", cliponaxis=False)
+    fig.update_layout(showlegend=False)
+    if orientation == "h" and not grouped.empty:
+        fig.update_xaxes(range=[0, float(grouped["count"].max()) * 1.25])
+    return style_figure(fig, title)
+
+
+def donut(df: pd.DataFrame, group: str, title: str) -> go.Figure:
+    if df.empty:
+        return empty_figure(title)
+    grouped = df[group].value_counts().rename_axis(group).reset_index(name="count")
+    fig = px.pie(
+        grouped,
+        names=group,
+        values="count",
+        hole=0.58,
+        color=group,
+        color_discrete_map={"Yes": DASHBOARD_COLORS["success"], "No": "#A78BFA"},
     )
     fig.update_traces(
-        branchvalues="total",
-        insidetextorientation="radial",
-        marker={"line": {"color": "rgba(5,5,6,0.72)", "width": 1.5}},
-        textinfo="label+percent parent",
-        hovertemplate="<b>%{label}</b><br>Purchases: %{value:,}<br>Total: $%{customdata[0]:,.0f}<br>Average order: $%{customdata[1]:.2f}<extra></extra>",
+        textposition="inside",
+        textinfo="percent",
+        textfont={"size": 13},
+        hovertemplate="<b>%{label}</b><br>Purchases: %{value:,}<br>Share: %{percent}<extra></extra>",
+        automargin=True,
+        marker={"line": {"color": "rgba(5,5,6,0.72)", "width": 1}},
+        insidetextorientation="horizontal",
     )
     styled = style_figure(fig, title)
     styled.update_layout(
-        coloraxis_showscale=False,
-        margin={"t": 58, "r": 18, "b": 18, "l": 18},
-        uniformtext={"minsize": 10, "mode": "hide"},
-    )
-    return styled
-
-
-def subscription_gauge(df: pd.DataFrame) -> go.Figure:
-    title = "Subscription Rate Gauge"
-    if df.empty:
-        return empty_figure(title)
-    counts = df["subscription_status"].value_counts()
-    subscribed = int(counts.get("Yes", 0))
-    not_subscribed = int(counts.get("No", 0))
-    subscription_rate = subscribed / len(df) * 100
-    fig = go.Figure(
-        go.Indicator(
-            mode="gauge+number",
-            value=subscription_rate,
-            number={"suffix": "%", "font": {"size": 44, "color": DASHBOARD_COLORS["text"]}},
-            domain={"x": [0.04, 0.96], "y": [0.18, 0.94]},
-            gauge={
-                "axis": {
-                    "range": [0, 100],
-                    "tickwidth": 1,
-                    "tickcolor": DASHBOARD_COLORS["grid"],
-                    "tickfont": {"color": DASHBOARD_COLORS["muted"], "size": 11},
-                },
-                "bar": {"color": DASHBOARD_COLORS["primary"], "thickness": 0.28},
-                "bgcolor": "rgba(255,255,255,0.04)",
-                "borderwidth": 0,
-                "steps": [
-                    {"range": [0, 35], "color": "rgba(124,58,237,0.22)"},
-                    {"range": [35, 65], "color": "rgba(45,212,191,0.18)"},
-                    {"range": [65, 100], "color": "rgba(215,255,63,0.16)"},
-                ],
-                "threshold": {
-                    "line": {"color": DASHBOARD_COLORS["warning"], "width": 3},
-                    "thickness": 0.76,
-                    "value": 50,
-                },
-            },
-        )
-    )
-    styled = style_figure(fig, title)
-    styled.update_layout(
-        margin={"t": 58, "r": 24, "b": 50, "l": 24},
-        annotations=[
-            {
-                "text": f"<b>{subscribed:,}</b><br>Subscribed",
-                "x": 0.24,
-                "y": 0.05,
-                "xref": "paper",
-                "yref": "paper",
-                "showarrow": False,
-                "font": {"color": DASHBOARD_COLORS["success"], "size": 13},
-            },
-            {
-                "text": f"<b>{not_subscribed:,}</b><br>Not subscribed",
-                "x": 0.76,
-                "y": 0.05,
-                "xref": "paper",
-                "yref": "paper",
-                "showarrow": False,
-                "font": {"color": DASHBOARD_COLORS["muted"], "size": 13},
-            },
-        ],
+        margin={"t": 58, "r": 30, "b": 94, "l": 30},
+        legend={
+            "orientation": "h",
+            "y": -0.15,
+            "x": 0.5,
+            "xanchor": "center",
+            "yanchor": "top",
+            "font": {"color": DASHBOARD_COLORS["muted"], "size": 12},
+        },
+        uniformtext={"minsize": 12, "mode": "show"},
     )
     return styled
 
@@ -1016,13 +1004,19 @@ def category_revenue_treemap(df: pd.DataFrame) -> go.Figure:
         grouped,
         path=["category"],
         values="total_sales",
-        color="avg_order",
-        color_continuous_scale=["#7C3AED", "#54D6FF", "#D7FF3F"],
+        color="category",
+        color_discrete_map={
+            "Clothing": "#2563EB",
+            "Accessories": "#0F766E",
+            "Footwear": "#C2410C",
+            "Outerwear": "#7C3AED",
+        },
         custom_data=["purchases", "avg_order"],
-        labels={"total_sales": "Total spending (USD)", "avg_order": "Average order"},
+        labels={"total_sales": "Total spending (USD)", "category": "Category"},
     )
     fig.update_traces(
         texttemplate="<b>%{label}</b><br>$%{value:,.0f}",
+        textfont={"color": DASHBOARD_COLORS["text"], "size": 14},
         hovertemplate="<b>%{label}</b><br>Total: $%{value:,.0f}<br>Average order: $%{customdata[1]:.2f}<br>Purchases: %{customdata[0]:,.0f}<extra></extra>",
         marker={"line": {"color": "rgba(5,5,6,0.7)", "width": 2}},
     )
@@ -1031,110 +1025,83 @@ def category_revenue_treemap(df: pd.DataFrame) -> go.Figure:
     return styled
 
 
-def seasonal_revenue_pulse(df: pd.DataFrame) -> go.Figure:
-    title = "Seasonal Revenue Pulse"
+def season_line(df: pd.DataFrame) -> go.Figure:
     if df.empty:
-        return empty_figure(title)
-    grouped = (
-        df.groupby("season", as_index=False)
-        .agg(total_sales=("purchase_amount", "sum"), purchases=("customer_id", "count"), avg_order=("purchase_amount", "mean"))
-    )
+        return empty_figure("Total Spending by Season")
+    grouped = df.groupby("season", as_index=False)["purchase_amount"].sum()
     grouped["season"] = pd.Categorical(grouped["season"], categories=SEASON_ORDER, ordered=True)
     grouped = grouped.sort_values("season")
-    fig = go.Figure(
-        go.Barpolar(
-            r=grouped["total_sales"].tolist(),
-            theta=grouped["season"].astype(str).tolist(),
-            text=[money(value) for value in grouped["total_sales"]],
-            customdata=grouped[["purchases", "avg_order"]].to_numpy(),
-            marker={
-                "color": grouped["total_sales"].tolist(),
-                "colorscale": [[0, "#7C3AED"], [0.5, "#2DD4BF"], [1, "#D7FF3F"]],
-                "line": {"color": "rgba(250,250,250,0.28)", "width": 1},
-                "showscale": False,
-            },
-            opacity=0.9,
-            hovertemplate="<b>%{theta}</b><br>Total: %{text}<br>Purchases: %{customdata[0]:,.0f}<br>Average order: $%{customdata[1]:.2f}<extra></extra>",
-        )
+    fig = px.line(
+        grouped,
+        x="season",
+        y="purchase_amount",
+        markers=True,
+        labels={"season": "Season", "purchase_amount": "Total spending (USD)"},
     )
-    styled = style_figure(fig, title)
-    styled.update_layout(
-        showlegend=False,
-        margin={"t": 58, "r": 30, "b": 34, "l": 30},
-        polar={
-            "bgcolor": "rgba(0,0,0,0)",
-            "radialaxis": {
-                "showticklabels": False,
-                "ticks": "",
-                "gridcolor": "rgba(250,250,250,0.08)",
-                "linecolor": "rgba(250,250,250,0.08)",
-            },
-            "angularaxis": {
-                "direction": "clockwise",
-                "gridcolor": "rgba(250,250,250,0.10)",
-                "linecolor": "rgba(250,250,250,0.10)",
-                "tickfont": {"color": DASHBOARD_COLORS["text"], "size": 13},
-            },
-        },
+    fig.update_traces(
+        line={"width": 4, "color": DASHBOARD_COLORS["primary"]},
+        marker={"size": 10, "color": DASHBOARD_COLORS["primary"], "line": {"color": "#050506", "width": 1.4}},
+        hovertemplate="<b>%{x}</b><br>Total spending: $%{y:,.0f}<extra></extra>",
     )
-    return styled
+    return style_figure(fig, "Total Spending by Season")
 
 
-def customer_value_matrix(df: pd.DataFrame) -> go.Figure:
-    title = "Customer Value Matrix"
+def age_group_spending_profile(df: pd.DataFrame) -> go.Figure:
+    title = "Age Group Spending Curve"
     if df.empty:
         return empty_figure(title)
     grouped = (
-        df.groupby(["age_group", "gender"], observed=False)
+        df.groupby("age_group", observed=False)
         .agg(
-            purchases=("customer_id", "count"),
+            total_sales=("purchase_amount", "sum"),
             avg_order=("purchase_amount", "mean"),
-            repeat_depth=("previous_purchases", "mean"),
-            avg_rating=("review_rating", "mean"),
+            purchases=("customer_id", "count"),
         )
         .reset_index()
     )
     grouped = grouped[grouped["purchases"] > 0].copy()
+    if grouped.empty:
+        return empty_figure(title)
     grouped["age_group"] = grouped["age_group"].astype(str)
-    average_order = float(df["purchase_amount"].mean())
-    fig = px.scatter(
-        grouped,
-        x="age_group",
-        y="avg_order",
-        color="gender",
-        size="purchases",
-        size_max=42,
-        text="purchases",
-        custom_data=["purchases", "repeat_depth", "avg_rating"],
-        color_discrete_sequence=COLORWAY,
-        category_orders={"age_group": ["18-24", "25-34", "35-44", "45-54", "55-64", "65+"]},
-        labels={
-            "age_group": "Age group",
-            "avg_order": "Average order (USD)",
-            "gender": "Gender",
-            "purchases": "Purchases",
-        },
-    )
-    fig.update_traces(
-        texttemplate="%{text}",
-        textposition="middle center",
-        textfont={"color": "#050506", "size": 11},
-        marker={"line": {"color": "rgba(255,255,255,0.34)", "width": 1}},
-        hovertemplate="<b>%{x} | %{legendgroup}</b><br>Average order: $%{y:.2f}<br>Purchases: %{customdata[0]:,}<br>Repeat depth: %{customdata[1]:.1f}<br>Avg. rating: %{customdata[2]:.2f}<extra></extra>",
-    )
-    fig.add_hline(
-        y=average_order,
-        line={"color": "rgba(215,255,63,0.45)", "width": 1.5, "dash": "dot"},
-        annotation_text=f"Overall avg. {money(average_order)}",
-        annotation_font={"color": DASHBOARD_COLORS["primary"], "size": 11},
-        annotation_position="top left",
+    grouped["age_group"] = pd.Categorical(grouped["age_group"], categories=["18-24", "25-34", "35-44", "45-54", "55-64", "65+"], ordered=True)
+    grouped = grouped.sort_values("age_group")
+    grouped["total_label"] = grouped["total_sales"].map(money)
+    marker_sizes = (grouped["purchases"] / grouped["purchases"].max() * 16 + 9).tolist()
+    text_positions = ["top center"] * len(grouped)
+    if text_positions:
+        text_positions[0] = "top right"
+        text_positions[-1] = "top left"
+    fig = go.Figure(
+        go.Scatter(
+            x=grouped["age_group"].astype(str),
+            y=grouped["total_sales"],
+            mode="lines+markers+text",
+            text=grouped["total_label"],
+            textposition=text_positions,
+            textfont={"color": DASHBOARD_COLORS["text"], "size": 12},
+            customdata=grouped[["purchases", "avg_order"]].to_numpy(),
+            fill="tozeroy",
+            fillcolor="rgba(84, 214, 255, 0.18)",
+            line={"color": "#54D6FF", "width": 4, "shape": "spline", "smoothing": 1.15},
+            marker={
+                "size": marker_sizes,
+                "color": grouped["avg_order"],
+                "colorscale": [[0, "#7C3AED"], [0.48, "#54D6FF"], [1, "#D7FF3F"]],
+                "showscale": True,
+                "colorbar": {
+                    "title": {"text": "Avg order", "font": {"color": DASHBOARD_COLORS["muted"]}},
+                    "tickprefix": "$",
+                    "tickfont": {"color": DASHBOARD_COLORS["muted"]},
+                },
+                "line": {"color": "rgba(5,5,6,0.85)", "width": 1.5},
+            },
+            hovertemplate="<b>%{x}</b><br>Total spending: $%{y:,.0f}<br>Purchases: %{customdata[0]:,}<br>Average order: $%{customdata[1]:.2f}<extra></extra>",
+        )
     )
     styled = style_figure(fig, title)
-    styled.update_layout(
-        legend={"orientation": "h", "y": 1.08, "x": 1, "xanchor": "right", "font": {"color": DASHBOARD_COLORS["muted"]}},
-        margin={"t": 58, "r": 24, "b": 54, "l": 58},
-    )
-    styled.update_yaxes(tickprefix="$")
+    styled.update_layout(showlegend=False, margin={"t": 58, "r": 84, "b": 54, "l": 70})
+    styled.update_xaxes(title_text="Age group", range=[-0.35, len(grouped) - 0.65])
+    styled.update_yaxes(title_text="Total spending (USD)", tickprefix="$", range=[0, float(grouped["total_sales"].max()) * 1.22])
     return styled
 
 
@@ -1336,7 +1303,7 @@ def render_data_table(df: pd.DataFrame) -> None:
 
 
 def chart_caption(text: str) -> None:
-    st.markdown(f"<p class='chart-caption'>{escape(text)}</p>", unsafe_allow_html=True)
+    st.markdown(f"<div class='chart-caption'><span>Insight</span><p>{escape(text)}</p></div>", unsafe_allow_html=True)
 
 
 def render_chart(fig: go.Figure, caption: str) -> None:
@@ -1355,29 +1322,29 @@ def render_selected_view(df: pd.DataFrame, view: str) -> None:
             )
         with c2:
             render_chart(
-                seasonal_revenue_pulse(df),
-                "Shows each season as a revenue pulse. Longer, brighter segments mark stronger shopping periods.",
+                season_line(df),
+                "Tracks spending across seasons so the strongest shopping periods are easy to compare.",
             )
     elif view == "Customer Insights":
         section("Customer Insights", "A focused view of customer membership and spending behavior.")
         c1, c2 = st.columns(2)
         with c1:
             render_chart(
-                subscription_gauge(df),
-                "Shows the share of selected customers who are subscribed, with counts for subscribed and non-subscribed customers.",
+                donut(df, "subscription_status", "Subscription Status Share"),
+                "Compares subscribed and non-subscribed customers in the current filter selection.",
             )
         with c2:
             render_chart(
-                customer_value_matrix(df),
-                "Compares age and gender groups by average order value. Larger bubbles represent more purchases.",
+                age_group_spending_profile(df),
+                "Shows how customer spending changes across age groups, with marker color showing average order value.",
             )
     elif view == "Product & Sales":
         section("Product & Sales", "The clearest product demand signals without repeating the full dataset.")
         c1, c2 = st.columns(2)
         with c1:
             render_chart(
-                product_demand_sunburst(df),
-                "Maps product demand from category to item. Larger slices mean more purchases within the current filters.",
+                bar_count(df, "item_purchased", "Top Purchased Items", limit=10),
+                "Ranks the most purchased items so product demand is visible at a glance.",
             )
         with c2:
             render_chart(

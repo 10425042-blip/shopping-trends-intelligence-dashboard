@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from html import escape
 from pathlib import Path
-
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -47,7 +45,6 @@ COLUMN_MAP = {
 }
 
 DEFAULT_FILTERS = {
-    "filter_group": "Customer",
     "gender_filter": [],
     "subscription_filter": [],
     "age_filter": (18, 70),
@@ -300,7 +297,6 @@ def inject_css() -> None:
 
         div[data-testid="stPlotlyChart"]::before,
         div[data-testid="stDataFrame"]::before,
-        .glass-card::before,
         .hero-card::before {{
             content: "";
             position: absolute;
@@ -337,8 +333,7 @@ def inject_css() -> None:
             backdrop-filter: blur(34px) saturate(170%);
         }}
 
-        .hero-label,
-        .section-label {{
+        .hero-label {{
             margin: 0 0 10px 0;
             color: var(--primary);
             text-shadow: 0 0 22px rgba(215,255,63,0.20);
@@ -382,8 +377,7 @@ def inject_css() -> None:
 
         .hero-stat,
         .kpi-card,
-        .glass-card,
-        .insight-card {{
+        .takeaway-card {{
             position: relative;
             overflow: hidden;
             background:
@@ -396,8 +390,7 @@ def inject_css() -> None:
         }}
 
         .hero-stat:hover,
-        .kpi-card:hover,
-        .insight-card:hover {{
+        .kpi-card:hover {{
             border-color: rgba(215,255,63,0.42);
             box-shadow: var(--shadow), 0 0 42px rgba(215,255,63,0.12);
             background:
@@ -427,38 +420,6 @@ def inject_css() -> None:
             font-weight: 500;
             line-height: 1;
             text-shadow: 0 0 24px rgba(255,255,255,0.10);
-        }}
-
-        .dashboard-shell {{
-        }}
-
-        .dashboard-head {{
-            padding: 28px;
-            margin-bottom: 18px;
-            background:
-                linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.035)),
-                linear-gradient(120deg, rgba(215,255,63,0.08), rgba(124,58,237,0.14)),
-                rgba(5,5,6,0.54);
-            border: 1px solid var(--line);
-            border-radius: 28px;
-            box-shadow: var(--shadow), var(--glow);
-            backdrop-filter: blur(28px) saturate(170%);
-        }}
-
-        .dashboard-title {{
-            margin: 0;
-            color: var(--text);
-            font-size: clamp(34px, 4.6vw, 58px);
-            font-weight: 320;
-            line-height: 1.04;
-        }}
-
-        .dashboard-copy {{
-            margin: 14px 0 0 0;
-            max-width: 900px;
-            color: var(--muted);
-            font-size: 16px;
-            line-height: 1.55;
         }}
 
         .kpi-card {{
@@ -532,31 +493,37 @@ def inject_css() -> None:
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
         }}
 
-        .insight-grid {{
+        .takeaway-card {{
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
-            margin: 10px 0 4px 0;
-        }}
-
-        .insight-card {{
-            min-height: 96px;
-            padding: 14px;
+            grid-template-columns: minmax(120px, 0.18fr) 1fr;
+            gap: 4px 18px;
+            align-items: center;
+            margin: 8px 0 8px 0;
+            padding: 12px 14px;
             border-radius: 16px;
         }}
 
-        .insight-card span {{
+        .takeaway-card span {{
             color: var(--primary);
             font-size: 11px;
             font-weight: 900;
             text-transform: uppercase;
         }}
 
-        .insight-card p {{
-            margin: 10px 0 0 0;
+        .takeaway-card strong {{
             color: var(--text);
-            font-size: 14px;
-            line-height: 1.5;
+            font-size: 15px;
+            font-weight: 760;
+            line-height: 1.35;
+        }}
+
+        .takeaway-card p {{
+            grid-column: 2;
+            margin: 0;
+            color: var(--text);
+            font-size: 13px;
+            line-height: 1.45;
+            opacity: 0.86;
         }}
 
         .filter-caption {{
@@ -613,10 +580,6 @@ def inject_css() -> None:
             .kpi-grid {{
                 grid-template-columns: repeat(3, minmax(0, 1fr));
             }}
-
-            .insight-grid {{
-                grid-template-columns: 1fr;
-            }}
         }}
 
         @media (max-width: 900px) {{
@@ -625,8 +588,7 @@ def inject_css() -> None:
                 padding-bottom: 0.9rem;
             }}
 
-            .hero-card,
-            .dashboard-head {{
+            .hero-card {{
                 padding: 24px;
                 border-radius: 18px;
             }}
@@ -653,17 +615,16 @@ def inject_css() -> None:
                 font-size: 24px;
             }}
 
-            .dashboard-title {{
-                font-size: clamp(34px, 10vw, 44px);
-                line-height: 1.08;
-            }}
-
             .kpi-grid {{
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }}
 
-            .insight-grid {{
+            .takeaway-card {{
                 grid-template-columns: 1fr;
+            }}
+
+            .takeaway-card p {{
+                grid-column: 1;
             }}
 
             .hero-stat-grid {{
@@ -690,12 +651,6 @@ def load_data() -> pd.DataFrame:
         df["age"],
         bins=[0, 24, 34, 44, 54, 64, 120],
         labels=["18-24", "25-34", "35-44", "45-54", "55-64", "65+"],
-        include_lowest=True,
-    )
-    df["purchase_band"] = pd.cut(
-        df["purchase_amount"],
-        bins=[0, 40, 60, 80, 101],
-        labels=["Under $40", "$40-$59", "$60-$79", "$80+"],
         include_lowest=True,
     )
     return df
@@ -797,8 +752,6 @@ def active_filter_count(df: pd.DataFrame) -> int:
     }
     count = 0
     for key in DEFAULT_FILTERS:
-        if key == "filter_group":
-            continue
         value = st.session_state.get(key)
         if isinstance(value, list) and value:
             count += 1
@@ -918,6 +871,7 @@ def style_figure(fig: go.Figure, title: str) -> go.Figure:
         plot_bgcolor="rgba(0,0,0,0)",
         font={"family": "IBM Plex Sans, Inter, Segoe UI, Arial, sans-serif", "color": DASHBOARD_COLORS["text"], "size": 13},
         colorway=COLORWAY,
+        height=430,
         margin={"t": 58, "r": 42, "b": 48, "l": 58},
         legend={"orientation": "h", "y": 1.03, "x": 1, "xanchor": "right", "font": {"color": DASHBOARD_COLORS["muted"]}},
         hoverlabel={"bgcolor": "#09090B", "font_color": "#FAFAFA", "bordercolor": DASHBOARD_COLORS["primary"]},
@@ -941,103 +895,110 @@ def style_figure(fig: go.Figure, title: str) -> go.Figure:
     return fig
 
 
-def bar_total(df: pd.DataFrame, group: str, value: str, title: str, limit: int | None = None, order: list[str] | None = None) -> go.Figure:
+def product_demand_sunburst(df: pd.DataFrame) -> go.Figure:
+    title = "Product Demand Map"
     if df.empty:
         return empty_figure(title)
-    grouped = df.groupby(group, as_index=False)[value].sum()
-    if order:
-        grouped[group] = pd.Categorical(grouped[group], categories=order, ordered=True)
-        grouped = grouped.sort_values(group)
-        orientation = "v"
-    else:
-        grouped = grouped.sort_values(value, ascending=False)
-        if limit:
-            grouped = grouped.head(limit)
-        grouped = grouped.sort_values(value, ascending=True)
-        orientation = "h"
-
-    labels = {group: label_for(group), value: "Total spending (USD)"}
-    if orientation == "h":
-        fig = px.bar(
-            grouped,
-            x=value,
-            y=group,
-            orientation="h",
-            color=group,
-            text=value,
-            labels=labels,
-            color_discrete_sequence=COLORWAY,
+    grouped = (
+        df.groupby(["category", "item_purchased"], as_index=False)
+        .agg(
+            purchases=("customer_id", "count"),
+            total_sales=("purchase_amount", "sum"),
+            avg_order=("purchase_amount", "mean"),
         )
-    else:
-        fig = px.bar(grouped, x=group, y=value, color=group, text=value, labels=labels, color_discrete_sequence=COLORWAY)
-    fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside", cliponaxis=False)
-    fig.update_layout(showlegend=False)
-    if orientation == "h" and not grouped.empty:
-        fig.update_xaxes(range=[0, float(grouped[value].max()) * 1.25])
-    return style_figure(fig, title)
-
-
-def bar_count(df: pd.DataFrame, group: str, title: str, limit: int | None = None, order: list[str] | None = None) -> go.Figure:
-    if df.empty:
-        return empty_figure(title)
-    grouped = df[group].value_counts().rename_axis(group).reset_index(name="count")
-    if order:
-        grouped[group] = pd.Categorical(grouped[group], categories=order, ordered=True)
-        grouped = grouped.sort_values(group)
-        orientation = "v"
-    else:
-        grouped = grouped.sort_values("count", ascending=False)
-        if limit:
-            grouped = grouped.head(limit)
-        grouped = grouped.sort_values("count", ascending=True)
-        orientation = "h"
-    labels = {group: label_for(group), "count": "Purchases"}
-    if orientation == "h":
-        fig = px.bar(
-            grouped,
-            x="count",
-            y=group,
-            orientation="h",
-            color=group,
-            text="count",
-            labels=labels,
-            color_discrete_sequence=COLORWAY,
-        )
-    else:
-        fig = px.bar(grouped, x=group, y="count", color=group, text="count", labels=labels, color_discrete_sequence=COLORWAY)
-    fig.update_traces(textposition="outside", cliponaxis=False)
-    fig.update_layout(showlegend=False)
-    if orientation == "h" and not grouped.empty:
-        fig.update_xaxes(range=[0, float(grouped["count"].max()) * 1.25])
-    return style_figure(fig, title)
-
-
-def donut(df: pd.DataFrame, group: str, title: str) -> go.Figure:
-    if df.empty:
-        return empty_figure(title)
-    grouped = df[group].value_counts().rename_axis(group).reset_index(name="count")
-    fig = px.pie(grouped, names=group, values="count", hole=0.58, color_discrete_sequence=COLORWAY)
+        .sort_values(["category", "purchases"], ascending=[True, False])
+    )
+    top_items = grouped.groupby("category", group_keys=False).head(5)
+    fig = px.sunburst(
+        top_items,
+        path=["category", "item_purchased"],
+        values="purchases",
+        color="total_sales",
+        color_continuous_scale=["#7C3AED", "#54D6FF", "#D7FF3F"],
+        custom_data=["total_sales", "avg_order"],
+        labels={
+            "category": "Category",
+            "item_purchased": "Item purchased",
+            "purchases": "Purchases",
+            "total_sales": "Total spending (USD)",
+        },
+    )
     fig.update_traces(
-        textposition="inside",
-        textinfo="percent",
-        textfont={"size": 13},
-        hovertemplate="<b>%{label}</b><br>Purchases: %{value:,}<br>Share: %{percent}<extra></extra>",
-        automargin=True,
-        marker={"line": {"color": "rgba(5,5,6,0.72)", "width": 1}},
-        insidetextorientation="horizontal",
+        branchvalues="total",
+        insidetextorientation="radial",
+        marker={"line": {"color": "rgba(5,5,6,0.72)", "width": 1.5}},
+        textinfo="label+percent parent",
+        hovertemplate="<b>%{label}</b><br>Purchases: %{value:,}<br>Total: $%{customdata[0]:,.0f}<br>Average order: $%{customdata[1]:.2f}<extra></extra>",
     )
     styled = style_figure(fig, title)
     styled.update_layout(
-        margin={"t": 58, "r": 30, "b": 94, "l": 30},
-        legend={
-            "orientation": "h",
-            "y": -0.15,
-            "x": 0.5,
-            "xanchor": "center",
-            "yanchor": "top",
-            "font": {"color": DASHBOARD_COLORS["muted"], "size": 12},
-        },
-        uniformtext={"minsize": 12, "mode": "show"},
+        coloraxis_showscale=False,
+        margin={"t": 58, "r": 18, "b": 18, "l": 18},
+        uniformtext={"minsize": 10, "mode": "hide"},
+    )
+    return styled
+
+
+def subscription_gauge(df: pd.DataFrame) -> go.Figure:
+    title = "Subscription Rate Gauge"
+    if df.empty:
+        return empty_figure(title)
+    counts = df["subscription_status"].value_counts()
+    subscribed = int(counts.get("Yes", 0))
+    not_subscribed = int(counts.get("No", 0))
+    subscription_rate = subscribed / len(df) * 100
+    fig = go.Figure(
+        go.Indicator(
+            mode="gauge+number",
+            value=subscription_rate,
+            number={"suffix": "%", "font": {"size": 44, "color": DASHBOARD_COLORS["text"]}},
+            domain={"x": [0.04, 0.96], "y": [0.18, 0.94]},
+            gauge={
+                "axis": {
+                    "range": [0, 100],
+                    "tickwidth": 1,
+                    "tickcolor": DASHBOARD_COLORS["grid"],
+                    "tickfont": {"color": DASHBOARD_COLORS["muted"], "size": 11},
+                },
+                "bar": {"color": DASHBOARD_COLORS["primary"], "thickness": 0.28},
+                "bgcolor": "rgba(255,255,255,0.04)",
+                "borderwidth": 0,
+                "steps": [
+                    {"range": [0, 35], "color": "rgba(124,58,237,0.22)"},
+                    {"range": [35, 65], "color": "rgba(45,212,191,0.18)"},
+                    {"range": [65, 100], "color": "rgba(215,255,63,0.16)"},
+                ],
+                "threshold": {
+                    "line": {"color": DASHBOARD_COLORS["warning"], "width": 3},
+                    "thickness": 0.76,
+                    "value": 50,
+                },
+            },
+        )
+    )
+    styled = style_figure(fig, title)
+    styled.update_layout(
+        margin={"t": 58, "r": 24, "b": 50, "l": 24},
+        annotations=[
+            {
+                "text": f"<b>{subscribed:,}</b><br>Subscribed",
+                "x": 0.24,
+                "y": 0.05,
+                "xref": "paper",
+                "yref": "paper",
+                "showarrow": False,
+                "font": {"color": DASHBOARD_COLORS["success"], "size": 13},
+            },
+            {
+                "text": f"<b>{not_subscribed:,}</b><br>Not subscribed",
+                "x": 0.76,
+                "y": 0.05,
+                "xref": "paper",
+                "yref": "paper",
+                "showarrow": False,
+                "font": {"color": DASHBOARD_COLORS["muted"], "size": 13},
+            },
+        ],
     )
     return styled
 
@@ -1070,215 +1031,111 @@ def category_revenue_treemap(df: pd.DataFrame) -> go.Figure:
     return styled
 
 
-def season_line(df: pd.DataFrame) -> go.Figure:
-    if df.empty:
-        return empty_figure("Total Spending by Season")
-    grouped = df.groupby("season", as_index=False)["purchase_amount"].sum()
-    grouped["season"] = pd.Categorical(grouped["season"], categories=SEASON_ORDER, ordered=True)
-    grouped = grouped.sort_values("season")
-    fig = px.line(
-        grouped,
-        x="season",
-        y="purchase_amount",
-        markers=True,
-        labels={"season": "Season", "purchase_amount": "Total spending (USD)"},
-    )
-    fig.update_traces(line={"width": 4, "color": DASHBOARD_COLORS["primary"]}, marker={"size": 10})
-    return style_figure(fig, "Total Spending by Season")
-
-
-def age_purchase_scatter(df: pd.DataFrame) -> go.Figure:
-    title = "Age and Purchase Amount"
+def seasonal_revenue_pulse(df: pd.DataFrame) -> go.Figure:
+    title = "Seasonal Revenue Pulse"
     if df.empty:
         return empty_figure(title)
-    fig = px.scatter(
-        df,
-        x="age",
-        y="purchase_amount",
-        color="gender",
-        size="previous_purchases",
-        size_max=18,
-        opacity=0.72,
-        color_discrete_sequence=COLORWAY,
-        hover_data=["category", "item_purchased", "subscription_status"],
-        labels={
-            "age": "Age",
-            "purchase_amount": "Purchase amount (USD)",
-            "gender": "Gender",
-            "previous_purchases": "Previous purchases",
+    grouped = (
+        df.groupby("season", as_index=False)
+        .agg(total_sales=("purchase_amount", "sum"), purchases=("customer_id", "count"), avg_order=("purchase_amount", "mean"))
+    )
+    grouped["season"] = pd.Categorical(grouped["season"], categories=SEASON_ORDER, ordered=True)
+    grouped = grouped.sort_values("season")
+    fig = go.Figure(
+        go.Barpolar(
+            r=grouped["total_sales"].tolist(),
+            theta=grouped["season"].astype(str).tolist(),
+            text=[money(value) for value in grouped["total_sales"]],
+            customdata=grouped[["purchases", "avg_order"]].to_numpy(),
+            marker={
+                "color": grouped["total_sales"].tolist(),
+                "colorscale": [[0, "#7C3AED"], [0.5, "#2DD4BF"], [1, "#D7FF3F"]],
+                "line": {"color": "rgba(250,250,250,0.28)", "width": 1},
+                "showscale": False,
+            },
+            opacity=0.9,
+            hovertemplate="<b>%{theta}</b><br>Total: %{text}<br>Purchases: %{customdata[0]:,.0f}<br>Average order: $%{customdata[1]:.2f}<extra></extra>",
+        )
+    )
+    styled = style_figure(fig, title)
+    styled.update_layout(
+        showlegend=False,
+        margin={"t": 58, "r": 30, "b": 34, "l": 30},
+        polar={
+            "bgcolor": "rgba(0,0,0,0)",
+            "radialaxis": {
+                "showticklabels": False,
+                "ticks": "",
+                "gridcolor": "rgba(250,250,250,0.08)",
+                "linecolor": "rgba(250,250,250,0.08)",
+            },
+            "angularaxis": {
+                "direction": "clockwise",
+                "gridcolor": "rgba(250,250,250,0.10)",
+                "linecolor": "rgba(250,250,250,0.10)",
+                "tickfont": {"color": DASHBOARD_COLORS["text"], "size": 13},
+            },
         },
     )
-    fig.update_traces(marker={"line": {"color": "rgba(255,255,255,0.22)", "width": 0.6}})
-    styled = style_figure(fig, title)
-    styled.update_layout(legend={"orientation": "h", "y": 1.08, "x": 1, "xanchor": "right", "font": {"color": DASHBOARD_COLORS["muted"]}})
     return styled
 
 
-def discount_impact(df: pd.DataFrame) -> go.Figure:
+def customer_value_matrix(df: pd.DataFrame) -> go.Figure:
+    title = "Customer Value Matrix"
     if df.empty:
-        return empty_figure("Discount Impact")
+        return empty_figure(title)
     grouped = (
-        df.groupby(["discount_applied", "subscription_status"], as_index=False)
-        .agg(total_sales=("purchase_amount", "sum"), avg_order=("purchase_amount", "mean"), purchases=("customer_id", "count"))
-        .sort_values("total_sales", ascending=False)
-    )
-    fig = px.bar(
-        grouped,
-        x="discount_applied",
-        y="total_sales",
-        color="subscription_status",
-        barmode="group",
-        text="total_sales",
-        custom_data=["avg_order", "purchases"],
-        color_discrete_sequence=COLORWAY,
-        labels={
-            "discount_applied": "Discount applied",
-            "total_sales": "Total spending (USD)",
-            "subscription_status": "Subscription status",
-        },
-    )
-    fig.update_traces(
-        texttemplate="$%{text:,.0f}",
-        textposition="outside",
-        hovertemplate="<b>Discount: %{x}</b><br>Total: $%{y:,.0f}<br>Average order: $%{customdata[0]:.2f}<br>Purchases: %{customdata[1]:,.0f}<extra></extra>",
-    )
-    return style_figure(fig, "Total Spending by Discount and Subscription")
-
-
-def purchase_distribution(df: pd.DataFrame) -> go.Figure:
-    if df.empty:
-        return empty_figure("Purchase Amount Distribution")
-    values = df["purchase_amount"].dropna().astype(float).to_numpy()
-    if len(values) < 2 or float(np.std(values)) == 0:
-        fig = px.histogram(
-            df,
-            x="purchase_amount",
-            nbins=24,
-            color_discrete_sequence=[DASHBOARD_COLORS["primary"]],
-            labels={"purchase_amount": "Purchase amount (USD)", "count": "Purchases"},
+        df.groupby(["age_group", "gender"], observed=False)
+        .agg(
+            purchases=("customer_id", "count"),
+            avg_order=("purchase_amount", "mean"),
+            repeat_depth=("previous_purchases", "mean"),
+            avg_rating=("review_rating", "mean"),
         )
-        return style_figure(fig, "Purchase Amount Distribution")
-
-    x_grid = np.linspace(float(values.min()), float(values.max()), 180)
-    bandwidth = max(1.0, 1.06 * float(np.std(values, ddof=1)) * (len(values) ** -0.2))
-    scaled = (x_grid[:, None] - values[None, :]) / bandwidth
-    density = np.exp(-0.5 * scaled * scaled).sum(axis=1) / (len(values) * bandwidth * np.sqrt(2 * np.pi))
-
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=x_grid,
-            y=density,
-            mode="lines",
-            fill="tozeroy",
-            line={"color": DASHBOARD_COLORS["danger"], "width": 3},
-            fillcolor="rgba(255, 77, 141, 0.28)",
-            hovertemplate="Purchase amount: $%{x:.0f}<br>Density: %{y:.4f}<extra></extra>",
-        )
-    )
-    fig.update_xaxes(title_text="Purchase amount (USD)", range=[20, 100])
-    fig.update_yaxes(title_text="Density")
-    return style_figure(fig, "Purchase Amount Distribution")
-
-
-def rating_distribution(df: pd.DataFrame) -> go.Figure:
-    if df.empty:
-        return empty_figure("Review Rating Distribution")
-    grouped = (
-        df["review_rating"]
-        .value_counts()
-        .rename_axis("review_rating")
-        .reset_index(name="count")
-        .sort_values("review_rating")
-    )
-    fig = px.bar(
-        grouped,
-        x="review_rating",
-        y="count",
-        color="review_rating",
-        text="count",
-        color_continuous_scale=["#FFB86C", "#D7FF3F", "#38F7B0"],
-        labels={"review_rating": "Review rating", "count": "Number of reviews"},
-    )
-    fig.update_traces(textposition="outside", cliponaxis=False)
-    fig.update_layout(showlegend=False, coloraxis_showscale=False)
-    fig.update_xaxes(dtick=0.1)
-    if not grouped.empty:
-        fig.update_yaxes(range=[0, float(grouped["count"].max()) * 1.18])
-    return style_figure(fig, "Review Rating Distribution")
-
-
-def previous_purchases_distribution(df: pd.DataFrame) -> go.Figure:
-    if df.empty:
-        return empty_figure("Previous Purchases Distribution")
-    grouped = (
-        df["previous_purchases"]
-        .value_counts()
-        .rename_axis("previous_purchases")
-        .reset_index(name="count")
-        .sort_values("previous_purchases")
-    )
-    fig = px.bar(
-        grouped,
-        x="previous_purchases",
-        y="count",
-        color="count",
-        text="count",
-        color_continuous_scale=["#7C3AED", "#FF4D8D", "#D7FF3F"],
-        labels={"previous_purchases": "Number of previous purchases", "count": "Number of customers"},
-    )
-    fig.update_traces(textposition="outside", cliponaxis=False)
-    fig.update_layout(showlegend=False, coloraxis_showscale=False)
-    fig.update_xaxes(dtick=5)
-    if not grouped.empty:
-        fig.update_yaxes(range=[0, float(grouped["count"].max()) * 1.18])
-    return style_figure(fig, "Previous Purchases Distribution")
-
-
-def age_spend(df: pd.DataFrame) -> go.Figure:
-    if df.empty:
-        return empty_figure("Age Groups and Spending")
-    grouped = (
-        df.groupby("age_group", observed=False)
-        .agg(total_sales=("purchase_amount", "sum"), avg_order=("purchase_amount", "mean"), purchases=("customer_id", "count"))
         .reset_index()
     )
-    fig = px.bar(
+    grouped = grouped[grouped["purchases"] > 0].copy()
+    grouped["age_group"] = grouped["age_group"].astype(str)
+    average_order = float(df["purchase_amount"].mean())
+    fig = px.scatter(
         grouped,
         x="age_group",
-        y="total_sales",
-        color="avg_order",
-        color_continuous_scale=["#7C3AED", "#54D6FF", "#D7FF3F"],
-        text="total_sales",
-        custom_data=["avg_order", "purchases"],
+        y="avg_order",
+        color="gender",
+        size="purchases",
+        size_max=42,
+        text="purchases",
+        custom_data=["purchases", "repeat_depth", "avg_rating"],
+        color_discrete_sequence=COLORWAY,
+        category_orders={"age_group": ["18-24", "25-34", "35-44", "45-54", "55-64", "65+"]},
         labels={
             "age_group": "Age group",
-            "avg_order": "Average order",
-            "total_sales": "Total spending (USD)",
+            "avg_order": "Average order (USD)",
+            "gender": "Gender",
+            "purchases": "Purchases",
         },
     )
     fig.update_traces(
-        texttemplate="$%{text:,.0f}",
-        textposition="outside",
-        hovertemplate="<b>%{x}</b><br>Total: $%{y:,.0f}<br>Average order: $%{customdata[0]:.2f}<br>Purchases: %{customdata[1]:,.0f}<extra></extra>",
+        texttemplate="%{text}",
+        textposition="middle center",
+        textfont={"color": "#050506", "size": 11},
+        marker={"line": {"color": "rgba(255,255,255,0.34)", "width": 1}},
+        hovertemplate="<b>%{x} | %{legendgroup}</b><br>Average order: $%{y:.2f}<br>Purchases: %{customdata[0]:,}<br>Repeat depth: %{customdata[1]:.1f}<br>Avg. rating: %{customdata[2]:.2f}<extra></extra>",
     )
-    return style_figure(fig, "Age Groups and Spending")
-
-
-def category_rating(df: pd.DataFrame) -> go.Figure:
-    if df.empty:
-        return empty_figure("Customer Ratings by Category")
-    fig = px.box(
-        df,
-        x="category",
-        y="review_rating",
-        color="category",
-        points="outliers",
-        color_discrete_sequence=COLORWAY,
-        labels={"category": "Category", "review_rating": "Review rating"},
+    fig.add_hline(
+        y=average_order,
+        line={"color": "rgba(215,255,63,0.45)", "width": 1.5, "dash": "dot"},
+        annotation_text=f"Overall avg. {money(average_order)}",
+        annotation_font={"color": DASHBOARD_COLORS["primary"], "size": 11},
+        annotation_position="top left",
     )
-    fig.update_layout(showlegend=False)
-    return style_figure(fig, "Customer Ratings by Category")
+    styled = style_figure(fig, title)
+    styled.update_layout(
+        legend={"orientation": "h", "y": 1.08, "x": 1, "xanchor": "right", "font": {"color": DASHBOARD_COLORS["muted"]}},
+        margin={"t": 58, "r": 24, "b": 54, "l": 58},
+    )
+    styled.update_yaxes(tickprefix="$")
+    return styled
 
 
 def category_season_heatmap(df: pd.DataFrame) -> go.Figure:
@@ -1329,38 +1186,37 @@ def kpi_values(df: pd.DataFrame, full_df: pd.DataFrame) -> list[dict[str, str]]:
     ]
 
 
-def insight_values(df: pd.DataFrame, view: str) -> list[str]:
+def takeaway_value(df: pd.DataFrame, view: str) -> dict[str, str]:
     if df.empty:
-        return ["No records match the current filters."]
+        return {
+            "title": "No matching purchases",
+            "copy": "Reset filters or widen the selected ranges to bring records back into the dashboard.",
+        }
     category = df.groupby("category")["purchase_amount"].sum().sort_values(ascending=False)
     season = df.groupby("season")["purchase_amount"].sum().sort_values(ascending=False)
     subscription_rate = df["subscription_status"].eq("Yes").mean() * 100
     item = df["item_purchased"].value_counts()
     age_group = df.groupby("age_group", observed=False)["purchase_amount"].mean().sort_values(ascending=False)
 
-    view_insights = {
-        "Overview": [
-            f"{category.index[0]} leads filtered revenue with {money(category.iloc[0])}.",
-            f"{season.index[0]} is the strongest season in the current view.",
-            f"Average order is {money(df['purchase_amount'].mean())} across {number(len(df))} purchases.",
-        ],
-        "Customer Insights": [
-            f"Subscription rate is {pct(subscription_rate)} for the selected customers.",
-            f"Average review rating is {df['review_rating'].mean():.2f}.",
-            f"{age_group.index[0]} has the highest average order value by age group.",
-        ],
-        "Product & Sales": [
-            f"{item.index[0]} is the most frequently purchased item.",
-            f"{category.index[0]} is the highest-spending category.",
-            "Seasonal category patterns show where product demand changes most.",
-        ],
-        "Data Explorer": [
-            f"The table contains {number(len(df))} filtered purchases.",
-            f"Total filtered spending is {money(df['purchase_amount'].sum())}.",
-            f"Average order is {money(df['purchase_amount'].mean())}.",
-        ],
+    view_takeaways = {
+        "Overview": {
+            "title": f"{category.index[0]} leads revenue, with {season.index[0]} as the strongest season.",
+            "copy": f"Filtered sales total {money(df['purchase_amount'].sum())} across {number(len(df))} purchases, with an average order of {money(df['purchase_amount'].mean())}.",
+        },
+        "Customer Insights": {
+            "title": f"{pct(subscription_rate)} of selected customers are subscribed.",
+            "copy": f"The average review rating is {df['review_rating'].mean():.2f}, and {age_group.index[0]} has the highest average order value by age group.",
+        },
+        "Product & Sales": {
+            "title": f"{item.index[0]} is the top purchased item.",
+            "copy": f"{category.index[0]} drives the most revenue, while the heatmap shows how category demand changes by season.",
+        },
+        "Data Explorer": {
+            "title": f"{number(len(df))} filtered records are ready to inspect or export.",
+            "copy": f"The current selection represents {money(df['purchase_amount'].sum())} in spending with an average order of {money(df['purchase_amount'].mean())}.",
+        },
     }
-    return view_insights.get(view, view_insights["Overview"])
+    return view_takeaways.get(view, view_takeaways["Overview"])
 
 
 def render_landing(df: pd.DataFrame) -> None:
@@ -1376,8 +1232,8 @@ def render_landing(df: pd.DataFrame) -> None:
             <p class="hero-label">Shopping Trends Intelligence Dashboard</p>
             <h1 class="hero-title">Shopping Trends Intelligence</h1>
             <p class="hero-copy">
-              A liquid-glass retail analytics experience for exploring customer behavior, product demand,
-              discount impact, payment choices, and seasonal purchasing patterns from {len(df):,} shopping records.
+              A focused retail analytics dashboard for understanding revenue drivers, customer behavior,
+              and seasonal product demand across {len(df):,} shopping records.
             </p>
             <div class="hero-stat-grid">
               <div class="hero-stat"><span>Total sales</span><strong>{total_sales}</strong></div>
@@ -1401,9 +1257,8 @@ def render_landing(df: pd.DataFrame) -> None:
           <h2>About Dataset</h2>
           <p>
             This dashboard uses <strong>{len(df):,} shopping records</strong> across <strong>{categories}</strong> product
-            categories and <strong>{locations}</strong> locations. It analyzes purchase amount, customer profile,
-            product demand, seasonality, subscriptions, discounts, promo code usage, payment methods, shipping type,
-            and review ratings.
+            categories and <strong>{locations}</strong> locations. Global filters let users narrow customer, product,
+            market, and transaction fields while the main views stay focused on the strongest visual signals.
           </p>
         </div>
         """,
@@ -1423,15 +1278,16 @@ def render_kpis(df: pd.DataFrame, full_df: pd.DataFrame) -> None:
     st.markdown(f"<div class='kpi-grid'>{cards}</div>", unsafe_allow_html=True)
 
 
-def render_insights(df: pd.DataFrame, view: str) -> None:
-    cards = "".join(
-        "<div class='insight-card'>"
-        "<span>Insight</span>"
-        f"<p>{escape(text)}</p>"
-        "</div>"
-        for text in insight_values(df, view)
+def render_takeaway(df: pd.DataFrame, view: str) -> None:
+    takeaway = takeaway_value(df, view)
+    st.markdown(
+        "<div class='takeaway-card'>"
+        "<span>Key takeaway</span>"
+        f"<strong>{escape(takeaway['title'])}</strong>"
+        f"<p>{escape(takeaway['copy'])}</p>"
+        "</div>",
+        unsafe_allow_html=True,
     )
-    st.markdown(f"<div class='insight-grid'>{cards}</div>", unsafe_allow_html=True)
 
 
 def section(title: str, copy: str) -> None:
@@ -1472,11 +1328,11 @@ def render_data_table(df: pd.DataFrame) -> None:
         data=csv,
         file_name="filtered_shopping_trends.csv",
         mime="text/csv",
-        use_container_width=True,
+        width="stretch",
     )
     table_df = export_df.copy()
     table_df["purchase_amount"] = table_df["purchase_amount"].map(lambda value: f"${value:,.0f}")
-    st.dataframe(table_df, use_container_width=True, height=520, hide_index=True)
+    st.dataframe(table_df, width="stretch", height=520, hide_index=True)
 
 
 def chart_caption(text: str) -> None:
@@ -1484,7 +1340,7 @@ def chart_caption(text: str) -> None:
 
 
 def render_chart(fig: go.Figure, caption: str) -> None:
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
     chart_caption(caption)
 
 
@@ -1499,29 +1355,29 @@ def render_selected_view(df: pd.DataFrame, view: str) -> None:
             )
         with c2:
             render_chart(
-                season_line(df),
-                "Tracks spending across seasons so the strongest shopping periods are easy to compare.",
+                seasonal_revenue_pulse(df),
+                "Shows each season as a revenue pulse. Longer, brighter segments mark stronger shopping periods.",
             )
     elif view == "Customer Insights":
         section("Customer Insights", "A focused view of customer membership and spending behavior.")
         c1, c2 = st.columns(2)
         with c1:
             render_chart(
-                donut(df, "subscription_status", "Subscription Status Share"),
-                "Compares subscribed and non-subscribed customers in the current filter selection.",
+                subscription_gauge(df),
+                "Shows the share of selected customers who are subscribed, with counts for subscribed and non-subscribed customers.",
             )
         with c2:
             render_chart(
-                age_purchase_scatter(df),
-                "Plots each purchase by age and amount. Bubble size adds repeat-purchase context for customer behavior.",
+                customer_value_matrix(df),
+                "Compares age and gender groups by average order value. Larger bubbles represent more purchases.",
             )
     elif view == "Product & Sales":
         section("Product & Sales", "The clearest product demand signals without repeating the full dataset.")
         c1, c2 = st.columns(2)
         with c1:
             render_chart(
-                bar_count(df, "item_purchased", "Top Purchased Items", limit=10),
-                "Ranks the most purchased items so product demand is visible at a glance.",
+                product_demand_sunburst(df),
+                "Maps product demand from category to item. Larger slices mean more purchases within the current filters.",
             )
         with c2:
             render_chart(
@@ -1553,7 +1409,7 @@ def render_dashboard(df: pd.DataFrame, full_df: pd.DataFrame) -> None:
         st.markdown("<div class='no-data'>No purchases match the current filters. Use Reset filters or widen the ranges.</div>", unsafe_allow_html=True)
 
     render_kpis(df, full_df)
-    render_insights(df, view)
+    render_takeaway(df, view)
     render_selected_view(df, view)
 
 

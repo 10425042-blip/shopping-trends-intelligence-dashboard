@@ -86,6 +86,13 @@ COLORWAY = [
     "#C084FC",
 ]
 
+NEON_CATEGORY_COLORS = {
+    "Clothing": DASHBOARD_COLORS["primary"],
+    "Accessories": DASHBOARD_COLORS["success"],
+    "Footwear": "#54D6FF",
+    "Outerwear": DASHBOARD_COLORS["danger"],
+}
+
 YES_NO_COLORS = {
     "Yes": DASHBOARD_COLORS["success"],
     "No": "#A78BFA",
@@ -1133,14 +1140,14 @@ def category_revenue_treemap(df: pd.DataFrame) -> go.Figure:
         grouped,
         path=["category"],
         values="total_sales",
-        color="avg_order",
-        color_continuous_scale=["#7C3AED", "#54D6FF", "#D7FF3F"],
+        color="category",
+        color_discrete_map=NEON_CATEGORY_COLORS,
         custom_data=["purchases", "avg_order"],
-        labels={"total_sales": "Total spending (USD)", "avg_order": "Average order"},
+        labels={"total_sales": "Total spending (USD)", "category": "Category"},
     )
     fig.update_traces(
         texttemplate="<b>%{label}</b><br>$%{value:,.0f}",
-        textfont={"color": DASHBOARD_COLORS["text"], "size": 14},
+        textfont={"color": "#050506", "size": 14},
         hovertemplate="<b>%{label}</b><br>Total: $%{value:,.0f}<br>Average order: $%{customdata[1]:.2f}<br>Purchases: %{customdata[0]:,.0f}<extra></extra>",
         marker={"line": {"color": "rgba(5,5,6,0.7)", "width": 2}},
     )

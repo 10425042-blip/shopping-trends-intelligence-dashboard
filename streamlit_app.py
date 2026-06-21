@@ -86,13 +86,6 @@ COLORWAY = [
     "#C084FC",
 ]
 
-NEON_CATEGORY_COLORS = {
-    "Clothing": DASHBOARD_COLORS["primary"],
-    "Accessories": DASHBOARD_COLORS["success"],
-    "Footwear": "#54D6FF",
-    "Outerwear": DASHBOARD_COLORS["danger"],
-}
-
 YES_NO_COLORS = {
     "Yes": DASHBOARD_COLORS["success"],
     "No": "#A78BFA",
@@ -1140,10 +1133,10 @@ def category_revenue_treemap(df: pd.DataFrame) -> go.Figure:
         grouped,
         path=["category"],
         values="total_sales",
-        color="category",
-        color_discrete_map=NEON_CATEGORY_COLORS,
+        color="avg_order",
+        color_continuous_scale=["#7C3AED", "#54D6FF", "#D7FF3F"],
         custom_data=["purchases", "avg_order"],
-        labels={"total_sales": "Total spending (USD)", "category": "Category"},
+        labels={"total_sales": "Total spending (USD)", "avg_order": "Average order"},
     )
     fig.update_traces(
         texttemplate="<b>%{label}</b><br>$%{value:,.0f}",

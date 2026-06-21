@@ -87,10 +87,10 @@ COLORWAY = [
 ]
 
 NEON_CATEGORY_COLORS = {
-    "Clothing": "#4D7C0F",
-    "Accessories": "#047857",
-    "Footwear": "#0E7490",
-    "Outerwear": "#A21CAF",
+    "Clothing": DASHBOARD_COLORS["primary"],
+    "Accessories": DASHBOARD_COLORS["success"],
+    "Footwear": "#54D6FF",
+    "Outerwear": DASHBOARD_COLORS["danger"],
 }
 
 YES_NO_COLORS = {

@@ -81,9 +81,22 @@ COLORWAY = [
     "#54D6FF",
     "#A78BFA",
     DASHBOARD_COLORS["danger"],
-    DASHBOARD_COLORS["warning"],
     "#2DD4BF",
+    "#F472B6",
+    "#C084FC",
 ]
+
+NEON_CATEGORY_COLORS = {
+    "Clothing": "#4D7C0F",
+    "Accessories": "#047857",
+    "Footwear": "#0E7490",
+    "Outerwear": "#A21CAF",
+}
+
+YES_NO_COLORS = {
+    "Yes": DASHBOARD_COLORS["success"],
+    "No": "#A78BFA",
+}
 
 DISPLAY_LABELS = {
     "age": "Age",
@@ -236,6 +249,31 @@ def inject_css() -> None:
             border-color: rgba(215,255,63,0.48);
             background: rgba(215,255,63,0.10);
             box-shadow: 0 0 24px rgba(215,255,63,0.12);
+        }}
+
+        section[data-testid="stSidebar"] details {{
+            overflow: hidden;
+            margin-top: 12px;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.085), rgba(255,255,255,0.035)),
+                rgba(5,5,6,0.45);
+            border: 1px solid rgba(215,255,63,0.22);
+            border-radius: 18px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 16px 46px rgba(0,0,0,0.24);
+        }}
+
+        section[data-testid="stSidebar"] details[open] {{
+            border-color: rgba(215,255,63,0.42);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 0 36px rgba(215,255,63,0.10);
+        }}
+
+        section[data-testid="stSidebar"] details > summary {{
+            min-height: 48px;
+            padding: 10px 12px;
+            color: var(--primary);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0;
         }}
 
         .block-container {{
@@ -517,6 +555,80 @@ def inject_css() -> None:
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
         }}
 
+        .filter-section-label {{
+            margin: 18px 0 8px 0;
+            padding-bottom: 6px;
+            color: var(--primary);
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }}
+
+        .view-switcher-label {{
+            margin: 2px 0 6px 0;
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }}
+
+        div[data-testid="stButtonGroup"],
+        div[data-testid="stSegmentedControl"],
+        div[data-testid="stRadio"] {{
+            margin-bottom: 10px;
+        }}
+
+        div[data-testid="stButtonGroup"] [role="radiogroup"],
+        div[data-testid="stSegmentedControl"] [role="radiogroup"],
+        div[data-testid="stRadio"] [role="radiogroup"] {{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: stretch;
+            padding: 6px;
+            background:
+                linear-gradient(135deg, rgba(215,255,63,0.10), rgba(84,214,255,0.07)),
+                rgba(255,255,255,0.045);
+            border: 1px solid rgba(255,255,255,0.13);
+            border-radius: 999px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 16px 44px rgba(0,0,0,0.22);
+            backdrop-filter: blur(18px) saturate(150%);
+        }}
+
+        div[data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_control"],
+        div[data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_controlActive"],
+        div[data-testid="stSegmentedControl"] label,
+        div[data-testid="stRadio"] label {{
+            flex: 1 1 150px;
+            min-height: 42px;
+            justify-content: center;
+            padding: 9px 14px;
+            color: #F4F4F5;
+            background: rgba(255,255,255,0.055);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 999px;
+            font-weight: 800;
+            text-align: center;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+        }}
+
+        div[data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_controlActive"],
+        div[data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_control"]:hover,
+        div[data-testid="stSegmentedControl"] label:has(input:checked),
+        div[data-testid="stRadio"] label:has(input:checked) {{
+            color: #050506;
+            background:
+                linear-gradient(135deg, var(--primary), var(--success));
+            border-color: rgba(215,255,63,0.72);
+            box-shadow: 0 0 30px rgba(215,255,63,0.22), inset 0 1px 0 rgba(255,255,255,0.30);
+        }}
+
+        div[data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_controlActive"] p,
+        div[data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_control"]:hover p {{
+            color: #050506;
+        }}
+
         .takeaway-card {{
             display: grid;
             grid-template-columns: minmax(120px, 0.18fr) 1fr;
@@ -653,6 +765,25 @@ def inject_css() -> None:
 
             .hero-stat-grid {{
                 grid-template-columns: repeat(2, minmax(0, 1fr));
+            }}
+
+            div[data-testid="stButtonGroup"] [role="radiogroup"],
+            div[data-testid="stSegmentedControl"] [role="radiogroup"],
+            div[data-testid="stRadio"] [role="radiogroup"] {{
+                gap: 8px;
+                border-radius: 18px !important;
+            }}
+
+            div[data-testid="stSegmentedControl"] label,
+            div[data-testid="stRadio"] label {{
+                flex-basis: 100%;
+                border-radius: 14px;
+            }}
+
+            div[data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_control"],
+            div[data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_controlActive"] {{
+                flex-basis: 100%;
+                border-radius: 14px !important;
             }}
         }}
 
@@ -825,16 +956,21 @@ def active_filter_labels(df: pd.DataFrame) -> list[str]:
     return labels
 
 
+def sidebar_filter_section(title: str) -> None:
+    st.markdown(f"<div class='filter-section-label'>{escape(title)}</div>", unsafe_allow_html=True)
+
+
 def sidebar_filters(df: pd.DataFrame) -> None:
     with st.sidebar:
-        st.markdown("### Filters")
-        st.button("Reset filters", on_click=reset_filters, args=(df,))
-        st.markdown(
-            f"<div class='filter-caption'>All filters work together across the dashboard. Active filters: <b>{active_filter_count(df)}</b>.</div>",
-            unsafe_allow_html=True,
-        )
+        st.markdown("### Controls")
+        with st.expander("Refine & Sort Data", expanded=False):
+            st.markdown(
+                f"<div class='filter-caption'>All filters work together across the dashboard. Active filters: <b>{active_filter_count(df)}</b>.</div>",
+                unsafe_allow_html=True,
+            )
+            st.button("Reset filters", key="reset_filters_button", on_click=reset_filters, args=(df,))
 
-        with st.expander("Customer filters", expanded=True):
+            sidebar_filter_section("Customer")
             st.multiselect("Gender", sorted_unique(df, "gender"), key="gender_filter")
             st.slider("Age range", int(df["age"].min()), int(df["age"].max()), key="age_filter")
             st.multiselect("Subscription status", sorted_unique(df, "subscription_status"), key="subscription_filter")
@@ -846,17 +982,17 @@ def sidebar_filters(df: pd.DataFrame) -> None:
                 step=0.1,
             )
 
-        with st.expander("Product filters", expanded=False):
+            sidebar_filter_section("Product")
             st.multiselect("Category", sorted_unique(df, "category"), key="category_filter")
             st.multiselect("Item purchased", sorted_unique(df, "item_purchased"), key="item_filter")
             st.multiselect("Size", sorted_unique(df, "size", SIZE_ORDER), key="size_filter")
             st.multiselect("Color", sorted_unique(df, "color"), key="color_filter")
 
-        with st.expander("Market filters", expanded=False):
+            sidebar_filter_section("Market")
             st.multiselect("Season", sorted_unique(df, "season", SEASON_ORDER), key="season_filter")
             st.multiselect("Location", sorted_unique(df, "location"), key="location_filter")
 
-        with st.expander("Transaction filters", expanded=False):
+            sidebar_filter_section("Transaction")
             st.multiselect("Payment method", sorted_unique(df, "payment_method"), key="payment_filter")
             st.multiselect("Shipping type", sorted_unique(df, "shipping_type"), key="shipping_filter")
             st.multiselect("Discount applied", sorted_unique(df, "discount_applied"), key="discount_filter")
@@ -964,7 +1100,7 @@ def donut(df: pd.DataFrame, group: str, title: str) -> go.Figure:
         values="count",
         hole=0.58,
         color=group,
-        color_discrete_map={"Yes": DASHBOARD_COLORS["success"], "No": "#A78BFA"},
+        color_discrete_map=YES_NO_COLORS,
     )
     fig.update_traces(
         textposition="inside",
@@ -1005,12 +1141,7 @@ def category_revenue_treemap(df: pd.DataFrame) -> go.Figure:
         path=["category"],
         values="total_sales",
         color="category",
-        color_discrete_map={
-            "Clothing": "#2563EB",
-            "Accessories": "#0F766E",
-            "Footwear": "#C2410C",
-            "Outerwear": "#7C3AED",
-        },
+        color_discrete_map=NEON_CATEGORY_COLORS,
         custom_data=["purchases", "avg_order"],
         labels={"total_sales": "Total spending (USD)", "category": "Category"},
     )
@@ -1269,6 +1400,35 @@ def render_active_filters(full_df: pd.DataFrame) -> None:
     st.markdown(f"<div class='filter-summary'>{chips}</div>", unsafe_allow_html=True)
 
 
+def render_view_switcher() -> str:
+    current_view = st.session_state.get("dashboard_view", DASHBOARD_VIEWS[0])
+    if current_view not in DASHBOARD_VIEWS:
+        current_view = DASHBOARD_VIEWS[0]
+    selector_key = "dashboard_view_selector"
+    st.markdown("<p class='view-switcher-label'>Dashboard view</p>", unsafe_allow_html=True)
+    if hasattr(st, "segmented_control"):
+        view = st.segmented_control(
+            "Dashboard view",
+            DASHBOARD_VIEWS,
+            default=current_view,
+            key=selector_key,
+            label_visibility="collapsed",
+            width="stretch",
+        )
+    else:
+        view = st.radio(
+            "Dashboard view",
+            DASHBOARD_VIEWS,
+            index=DASHBOARD_VIEWS.index(current_view),
+            key=selector_key,
+            horizontal=True,
+            label_visibility="collapsed",
+        )
+    selected_view = view if view in DASHBOARD_VIEWS else current_view
+    st.session_state.dashboard_view = selected_view
+    return selected_view
+
+
 def render_data_table(df: pd.DataFrame) -> None:
     display_columns = [
         "customer_id",
@@ -1358,19 +1518,16 @@ def render_selected_view(df: pd.DataFrame, view: str) -> None:
 
 def render_dashboard(df: pd.DataFrame, full_df: pd.DataFrame) -> None:
     sidebar_filters(full_df)
-    summary_col, view_col, back_col = st.columns([2.1, 1, 0.85])
+    summary_col, back_col = st.columns([3.1, 0.85])
     with summary_col:
         render_active_filters(full_df)
-    with view_col:
-        st.markdown("<p class='field-label'>Dashboard view</p>", unsafe_allow_html=True)
-        if st.session_state.dashboard_view not in DASHBOARD_VIEWS:
-            st.session_state.dashboard_view = DASHBOARD_VIEWS[0]
-        view = st.selectbox("Dashboard view", DASHBOARD_VIEWS, key="dashboard_view", label_visibility="collapsed")
     with back_col:
         st.markdown("<p class='field-label'>Navigation</p>", unsafe_allow_html=True)
         if st.button("Back to Landing", key="back_to_landing"):
             st.session_state.entered_dashboard = False
             st.rerun()
+
+    view = render_view_switcher()
 
     if df.empty:
         st.markdown("<div class='no-data'>No purchases match the current filters. Use Reset filters or widen the ranges.</div>", unsafe_allow_html=True)
